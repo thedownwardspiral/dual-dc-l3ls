@@ -35,7 +35,7 @@ jobs:
 
       - name: Install Ansible and AVD Collection
         run: |
-          pip install ansible-core
+          pip install "ansible-core>=2.17,<2.18"
           ansible-galaxy collection install arista.avd
 
       - name: Install AVD Python requirements
@@ -62,7 +62,7 @@ jobs:
           fabric_name: DC-L3LS-FABRIC
 
           # Generate CSVs with fabric link info.
-           eos_designs_documentation:
+          eos_designs_documentation:
             topology_csv: true
             p2p_links_csv: true
 
