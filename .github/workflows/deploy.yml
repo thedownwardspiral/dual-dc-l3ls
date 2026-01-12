@@ -1,0 +1,200 @@
+---
+name: Deploy to CloudVision
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+      run_change_control:
+        description: 'Run CloudVision Change Control automatically'
+        required: true
+        default: true
+        type: boolean
+
+jobs:
+  deploy:
+    name: Deploy Configurations to CloudVision
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Ansible and AVD Collection
+        run: |
+          pip install ansible-core
+          ansible-galaxy collection install arista.avd
+
+      - name: Install AVD Python requirements
+        run: |
+          pip install -r ~/.ansible/collections/ansible_collections/arista/avd/requirements.txt
+
+      - name: Create fabric configuration from secrets
+        run: |
+          cat > group_vars/DC-L3LS-FABRIC.yml << 'EOF'
+          ---
+          ### group_vars/FABRIC.yml
+
+          # Ansible connectivity definitions
+          ansible_connection: ansible.netcommon.httpapi
+          ansible_network_os: arista.eos.eos
+          ansible_user: ${{ secrets.ANSIBLE_USER }}
+          ansible_password: ${{ secrets.ANSIBLE_PASSWORD }}
+          ansible_become: true
+          ansible_become_method: enable
+          ansible_httpapi_use_ssl: true
+          ansible_httpapi_validate_certs: false
+
+          # Common AVD group variables
+          fabric_name: DC-L3LS-FABRIC
+
+          # Generate CSVs with fabric link info.
+           eos_designs_documentation:
+            topology_csv: true
+            p2p_links_csv: true
+
+          # Define underlay and overlay routing protocol to be used
+          underlay_routing_protocol: ebgp
+          overlay_routing_protocol: ebgp
+
+          # BGP peer groups passwords
+          bgp_peer_groups:
+            evpn_overlay_peers:
+              password: ${{ secrets.BGP_PASSWORD }}
+            ipv4_underlay_peers:
+              password: ${{ secrets.BGP_PASSWORD }}
+            mlag_ipv4_underlay_peer:
+              password: ${{ secrets.BGP_PASSWORD }}
+
+          # P2P interfaces MTU
+          p2p_uplinks_mtu: 1500
+
+          # Define default interfaces
+          default_interfaces:
+            - types: [ spine ]
+              platforms: [ cEOS ]
+              uplink_interfaces: [ Ethernet1-2 ]
+              downlink_interfaces: [ Ethernet1-8 ]
+            - types: [ l3leaf ]
+              platforms: [ cEOS ]
+              uplink_interfaces: [ Ethernet1-2 ]
+              mlag_interfaces: [ Ethernet49-50 ]
+              downlink_interfaces: [ Ethernet1-8 ]
+            - types: [ l3leaf ]
+              platforms: [ cEOS ]
+              uplink_interfaces: [ Ethernet1-2 ]
+              mlag_interfaces: [ Ethernet49-50 ]
+              downlink_interfaces: [ Ethernet8 ]
+
+          # L3 Edge port definitions
+          l3_edge:
+            p2p_links_ip_pools:
+              - name: DCI_IP_pool
+                ipv4_pool: 172.16.100.0/24
+            p2p_links_profiles:
+              - name: DCI_profile
+                ip_pool: DCI_IP_pool
+                as: [65102, 65202]
+                include_in_underlay_protocol: true
+            p2p_links:
+              - id: 1
+                nodes: [dc01-bsl-01a, dc02-bsl-01a]
+                interfaces: [Ethernet8, Ethernet8]
+                profile: DCI_profile
+              - id: 2
+                nodes: [dc01-bsl-01a, dc02-bsl-01b]
+                interfaces: [Ethernet9, Ethernet9]
+                profile: DCI_profile
+              - id: 3
+                nodes: [dc01-bsl-01b, dc02-bsl-01b]
+                interfaces: [Ethernet8, Ethernet8]
+                profile: DCI_profile
+              - id: 4
+                nodes: [dc01-bsl-01b, dc02-bsl-01a]
+                interfaces: [Ethernet9, Ethernet9]
+                profile: DCI_profile
+          EOF
+
+      - name: Create deploy playbook from template
+        run: |
+          cat > deploy.yml << 'EOF'
+          ---
+          # deploy.yml
+
+          - name: Build and Deploy Configs
+            hosts: DC-L3LS-FABRIC
+            gather_facts: false
+            tasks:
+
+              - name: Generate AVD Structured Configurations and Fabric Documentation
+                ansible.builtin.import_role:
+                  name: arista.avd.eos_designs
+
+              - name: Generate Device Configurations and Documentation
+                ansible.builtin.import_role:
+                  name: arista.avd.eos_cli_config_gen
+
+          - name: "Configuration deployment - CVaaS"
+            hosts: "DC-L3LS-FABRIC"
+            connection: "local"
+            gather_facts: false
+            tasks:
+              - name: "Deploy configurations and tags to CloudVision"
+                tags: ["provision"]
+                ansible.builtin.import_role:
+                  name: "arista.avd.cv_deploy"
+                vars:
+                  cv_server: "${{ secrets.CV_SERVER }}"
+                  cv_token: "${{ secrets.CV_TOKEN }}"
+                  cv_inventory_hostname: "CVAAS"
+                  cv_verify_certs: true
+                  cv_run_change_control: ${{ inputs.run_change_control }}
+                  cv_change_control_description: "Automated deployment via GitHub Actions - Run ${{ github.run_number }}"
+                  cv_servers: "${{ secrets.CV_SERVER }}"
+          EOF
+
+      - name: Run AVD Deploy Playbook
+        run: ansible-playbook deploy.yml
+
+      - name: Upload deployment artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-artifacts-${{ github.run_number }}
+          path: |
+            intended/
+            documentation/
+          retention-days: 90
+
+      - name: Deployment Summary
+        if: success()
+        run: |
+          echo "## Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Successfully deployed configurations to CloudVision" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Details:" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment**: ${{ inputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Change Control**: ${{ inputs.run_change_control }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Run Number**: ${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Triggered by**: @${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: Deployment Failure Notice
+        if: failure()
+        run: |
+          echo "## ❌ Deployment Failed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Please check the logs above for error details." >> $GITHUB_STEP_SUMMARY

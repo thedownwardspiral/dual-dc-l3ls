@@ -1,5 +1,5 @@
 # Sensitive files - DO NOT COMMIT
-deploy.yml
+/deploy.yml
 group_vars/DC-L3LS-FABRIC.yml
 
 # Ansible
