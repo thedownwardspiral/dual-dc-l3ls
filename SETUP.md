@@ -2,6 +2,34 @@
 
 This document explains how to configure the required secrets and credentials for this AVD dual-DC project.
 
+## Deployment Options
+
+You have two options for running the playbooks:
+
+1. **GitHub Actions (Recommended)** - Automated CI/CD with GitHub runners
+2. **Local Execution** - Run playbooks from your workstation
+
+### Option 1: GitHub Actions (Recommended)
+
+GitHub Actions provides automated builds and deployments without needing local setup.
+
+**See [GITHUB_ACTIONS.md](GITHUB_ACTIONS.md) for complete setup instructions.**
+
+**Quick start:**
+- Configure GitHub Secrets with your credentials
+- Push to main branch → automatic build
+- Manual deploy trigger when ready
+
+**Benefits:**
+- No local Ansible installation required
+- Automatic validation on every push/PR
+- Audit trail of all deployments
+- Team collaboration with approval workflows
+
+### Option 2: Local Execution
+
+For local development and testing, follow the instructions below.
+
 ## Initial Setup
 
 ### 1. Create Configuration Files from Templates

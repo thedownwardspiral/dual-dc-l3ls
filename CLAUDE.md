@@ -27,7 +27,18 @@ See `SETUP.md` for detailed configuration instructions.
 
 ## Common Commands
 
-### Build configurations
+### GitHub Actions (Recommended)
+
+This repository includes GitHub Actions workflows for CI/CD:
+
+- **Automatic builds**: Push to `main` or create PR → automatic configuration validation
+- **Manual deploys**: Navigate to Actions → Deploy to CloudVision → Run workflow
+
+See [GITHUB_ACTIONS.md](GITHUB_ACTIONS.md) for setup instructions.
+
+### Local Execution
+
+#### Build configurations
 Generate device configurations and documentation without deploying:
 ```bash
 ansible-playbook build.yml
@@ -38,7 +49,7 @@ This executes the `arista.avd.eos_designs` and `arista.avd.eos_cli_config_gen` r
 - Device configurations in `intended/configs/`
 - Documentation in `documentation/`
 
-### Deploy configurations
+#### Deploy configurations
 Build and deploy configurations to devices (uses CloudVision for deployment):
 ```bash
 ansible-playbook deploy.yml
