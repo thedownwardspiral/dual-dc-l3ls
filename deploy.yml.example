@@ -1,0 +1,37 @@
+---
+# deploy.yml
+
+- name: Build and Deploy Configs
+  hosts: DC-L3LS-FABRIC
+  gather_facts: false
+  tasks:
+
+    - name: Generate AVD Structured Configurations and Fabric Documentation
+      ansible.builtin.import_role:
+        name: arista.avd.eos_designs
+
+    - name: Generate Device Configurations and Documentation
+      ansible.builtin.import_role:
+        name: arista.avd.eos_cli_config_gen
+
+    # - name: Deploy Configurations to Devices
+    #   ansible.builtin.import_role:
+    #     name: arista.avd.eos_config_deploy_eapi
+
+- name: "Configuration deployment - CVaaS"
+  hosts: "DC-L3LS-FABRIC"
+  connection: "local"
+  gather_facts: false
+  tasks:
+    - name: "Deploy configurations and tags to CloudVision"
+      tags: ["provision"]
+      ansible.builtin.import_role:
+        name: "arista.avd.cv_deploy"
+      vars:
+        cv_server: "YOUR_CLOUDVISION_SERVER"  # e.g., "www.cv-prod-us-4.arista.io"
+        cv_token: "YOUR_CLOUDVISION_API_TOKEN_HERE"
+        cv_inventory_hostname: "CVAAS"
+        cv_verify_certs: true
+        cv_run_change_control: true # Set to false to disable automatic deployment
+        cv_change_control_description: "Automated deployment via Ansible AVD"
+        cv_servers: "YOUR_CLOUDVISION_SERVER"  # Should match cv_server

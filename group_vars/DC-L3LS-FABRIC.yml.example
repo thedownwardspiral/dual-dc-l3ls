@@ -1,0 +1,108 @@
+---
+### group_vars/FABRIC.yml
+
+# Ansible connectivity definitions
+# eAPI connectivity via HTTPS is specified (as opposed to CLI via SSH)
+ansible_connection: ansible.netcommon.httpapi
+# Specifies that we are indeed using Arista EOS
+ansible_network_os: arista.eos.eos
+# This user/password must exist on the switches to enable Ansible access
+ansible_user: admin
+ansible_password: YOUR_SWITCH_PASSWORD_HERE
+# User escalation (to enter enable mode)
+ansible_become: true
+ansible_become_method: enable
+# Use SSL (HTTPS)
+ansible_httpapi_use_ssl: true
+# Do not try to validate certs
+ansible_httpapi_validate_certs: false
+
+# Common AVD group variables
+fabric_name: DC-L3LS-FABRIC
+
+# Generate CSVs with fabric link info.
+ eos_designs_documentation:
+  topology_csv: true
+  p2p_links_csv: true
+
+# Define underlay and overlay routing protocol to be used
+underlay_routing_protocol: ebgp
+overlay_routing_protocol: ebgp
+
+# Local users
+# aaa_settings:
+#   local_users:
+#     # Username with no password configured
+#     - name: admin
+#       privilege: 15
+#       role: network-admin
+#       no_password: true
+
+#     # Username with a password
+#     - name: arista
+#       privilege: 15
+#       role: network-admin
+#       sha512_password: "$6$Enl0WfE32FthwyiJ$yTyGaEJ2uPKLU.F7314YtB7J1jrzrMi7ogXIRTEHQfLdLgKWWmr1UvNlZLN6AyuxET7G5aH3AI9OYRzxVTkB1."
+
+# BGP peer groups passwords
+# Generate encrypted passwords using: python3 -c "from ansible_collections.arista.avd.plugins.filter.encrypt import FilterModule; print(FilterModule().generate_password('YOUR_PASSWORD', 'bgp'))"
+bgp_peer_groups:
+  evpn_overlay_peers:
+    password: YOUR_BGP_PASSWORD_HERE
+  ipv4_underlay_peers:
+    password: YOUR_BGP_PASSWORD_HERE
+  mlag_ipv4_underlay_peer:
+    password: YOUR_BGP_PASSWORD_HERE
+
+# P2P interfaces MTU, includes VLANs 4093 and 4094 that are over peer-link
+# If you're running vEOS-lab or cEOS, you should use MTU of 1500 instead as shown in the following line
+# p2p_uplinks_mtu: 1500
+p2p_uplinks_mtu: 1500
+
+# Define default interfaces
+default_interfaces:
+  - types: [ spine ]
+    platforms: [ cEOS ]
+    uplink_interfaces: [ Ethernet1-2 ]
+    downlink_interfaces: [ Ethernet1-8 ]
+  - types: [ l3leaf ]
+    platforms: [ cEOS ]
+    uplink_interfaces: [ Ethernet1-2 ]
+    mlag_interfaces: [ Ethernet49-50 ]
+    downlink_interfaces: [ Ethernet1-8 ]
+  - types: [ l3leaf ]
+    platforms: [ cEOS ]
+    uplink_interfaces: [ Ethernet1-2 ]
+    mlag_interfaces: [ Ethernet49-50 ]
+    downlink_interfaces: [ Ethernet8 ]
+
+# L3 Edge port definitions. This can be any port in the entire Fabric, where IP interfaces are defined.
+l3_edge:
+  # Define a new IP pool that will be used to assign IP addresses to L3 Edge interfaces.
+  p2p_links_ip_pools:
+    - name: DCI_IP_pool
+      ipv4_pool: 172.16.100.0/24
+  # Define a new link profile which will match the IP pool, the used ASNs and include the defined interface into underlay routing
+  p2p_links_profiles:
+    - name: DCI_profile
+      ip_pool: DCI_IP_pool
+      as: [65102, 65202]
+      include_in_underlay_protocol: true
+  # Define each P2P L3 link and link the nodes, the interfaces and the profile used.
+  p2p_links:
+    - id: 1
+      nodes: [dc01-bsl-01a, dc02-bsl-01a]
+      interfaces: [Ethernet8, Ethernet8]
+      profile: DCI_profile
+    - id: 2
+      nodes: [dc01-bsl-01a, dc02-bsl-01b]
+      interfaces: [Ethernet9, Ethernet9]
+      profile: DCI_profile
+    - id: 3
+      nodes: [dc01-bsl-01b, dc02-bsl-01b]
+      interfaces: [Ethernet8, Ethernet8]
+      profile: DCI_profile
+    - id: 4
+      nodes: [dc01-bsl-01b, dc02-bsl-01a]
+      interfaces: [Ethernet9, Ethernet9]
+      profile: DCI_profile

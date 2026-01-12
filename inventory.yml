@@ -1,0 +1,68 @@
+---
+# inventory.yml
+all:
+  children:
+    CLOUDVISION:
+    hosts:
+    DC-L3LS-FABRIC:
+      vars:
+        ansible_connection: "ansible.netcommon.httpapi"
+        ansible_network_os: "arista.eos.eos"
+        ansible_become: true
+        ansible_become_method: "enable"
+        ansible_httpapi_use_ssl: true
+        ansible_httpapi_validate_certs: false
+      children:
+        DC1:
+          children:
+            DC1_SPINES:
+              hosts:
+                dc01-spine-01:
+                  ansible_host: 172.20.20.2
+                dc01-spine-02:
+                  ansible_host: 172.20.20.3
+            DC1_L3_LEAVES:
+              hosts:
+                dc01-leaf-01a:
+                  ansible_host: 172.20.20.6
+                dc01-leaf-01b:
+                  ansible_host: 172.20.20.7
+            DC1_BORDER_LEAVES:
+              hosts:
+                dc01-bsl-01a:
+                  ansible_host: 172.20.20.12
+                dc01-bsl-01b:
+                  ansible_host: 172.20.20.13
+        DC2:
+          children:
+            DC2_SPINES:
+              hosts:
+                dc02-spine-01:
+                  ansible_host: 172.20.20.20
+                dc02-spine-02:
+                  ansible_host: 172.20.20.21
+            DC2_L3_LEAVES:
+              hosts:
+                dc02-leaf-01a:
+                  ansible_host: 172.20.20.24
+                dc02-leaf-01b:
+                  ansible_host: 172.20.20.25
+            DC2_BORDER_LEAVES:
+              hosts:
+                dc02-bsl-01a:
+                  ansible_host: 172.20.20.30
+                dc02-bsl-01b:
+                  ansible_host: 172.20.20.31
+
+    NETWORK_SERVICES:
+      children:
+        DC1_L3_LEAVES:
+        DC1_BORDER_LEAVES:
+        DC2_L3_LEAVES:
+        DC2_BORDER_LEAVES:
+    CONNECTED_ENDPOINTS:
+      children:
+        DC1_L3_LEAVES:
+        DC1_BORDER_LEAVES:
+        DC2_L3_LEAVES:
+        DC2_BORDER_LEAVES:

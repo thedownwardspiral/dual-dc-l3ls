@@ -1,0 +1,55 @@
+# Sensitive files - DO NOT COMMIT
+deploy.yml
+group_vars/DC-L3LS-FABRIC.yml
+
+# Ansible
+*.retry
+
+# Backup configurations
+config_backup/
+
+# Generated configurations and documentation
+intended/
+switch-basic-configurations/
+documentation/
+
+# Example diagrams (from Arista AVD documentation, may not match actual topology)
+images/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Certificates and keys
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# Environment files
+.env
+.env.local
