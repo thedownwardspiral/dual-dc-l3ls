@@ -70,14 +70,17 @@ jobs:
           underlay_routing_protocol: ebgp
           overlay_routing_protocol: ebgp
 
-          # BGP peer groups passwords (plaintext - AVD will encrypt)
+          # BGP peer groups passwords (SHA-256 encrypted)
           bgp_peer_groups:
             evpn_overlay_peers:
               password: "${{ secrets.BGP_PASSWORD }}"
+              type: "8a"
             ipv4_underlay_peers:
               password: "${{ secrets.BGP_PASSWORD }}"
+              type: "8a"
             mlag_ipv4_underlay_peer:
               password: "${{ secrets.BGP_PASSWORD }}"
+              type: "8a"
 
           # P2P interfaces MTU
           p2p_uplinks_mtu: 1500
